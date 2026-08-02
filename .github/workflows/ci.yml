@@ -15,22 +15,20 @@ permissions:
 
 jobs:
   evaluate:
-
     runs-on: ubuntu-latest
 
     steps:
-
+      # Checkout repository
       - name: Checkout Repository
         uses: actions/checkout@v4
 
+      # Setup Python
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
 
-      # -------------------------
-      # Authenticate to GCP (WIF)
-      # -------------------------
+      # Authenticate to Google Cloud (OIDC + WIF)
       - id: auth
         name: Authenticate to Google Cloud
         uses: google-github-actions/auth@v2
@@ -38,36 +36,28 @@ jobs:
           workload_identity_provider: ${{ secrets.WIF_PROVIDER }}
           service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
 
+      # Install gcloud
       - name: Setup Cloud SDK
         uses: google-github-actions/setup-gcloud@v2
 
-      - name: Export ADC
+      # Export credentials for DVC
+      - name: Export ADC Credentials
         run: |
           echo "GOOGLE_APPLICATION_CREDENTIALS=${{ steps.auth.outputs.credentials_file_path }}" >> $GITHUB_ENV
 
-      # -------------------------
       # Install dependencies
-      # -------------------------
-      - name: Install dependencies
+      - name: Install Dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-          pip install "dvc[gs]"
-          pip install pytest
-          pip install mlflow
-          pip install cml
 
-      # -------------------------
-      # Pull DVC snapshot
-      # -------------------------
+      # Pull versioned data from DVC
       - name: Pull DVC Data
         run: |
           dvc pull
 
-      # -------------------------
-      # Fetch best model
-      # -------------------------
-      - name: Fetch Best MLflow Model
+      # Load best registered model
+      - name: Fetch Best Model from MLflow
         env:
           MLFLOW_TRACKING_URI: ${{ secrets.MLFLOW_TRACKING_URI }}
         run: |
@@ -79,51 +69,38 @@ jobs:
           print("Successfully loaded registered model.")
           EOF
 
-      # -------------------------
       # Feature sanity tests
-      # -------------------------
-      - name: Feature Tests
+      - name: Run Feature Tests
         run: |
           pytest tests/test_features.py
 
-      # -------------------------
-      # Evaluate
-      # -------------------------
+      # Evaluate model
       - name: Evaluate Model
         env:
           MLFLOW_TRACKING_URI: ${{ secrets.MLFLOW_TRACKING_URI }}
         run: |
           python scripts/evaluate.py
 
-      # -------------------------
-      # Setup CML
-      # -------------------------
+      # Install official CML
       - name: Setup CML
         if: github.event_name == 'pull_request'
         uses: iterative/setup-cml@v2
 
-      # -------------------------
       # Generate report
-      # -------------------------
       - name: Generate CML Report
         if: github.event_name == 'pull_request'
         env:
           REPO_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-
-          echo "# Stock Movement Predictor" > report.md
-
+          echo "# OPPE-1 Evaluation Report" > report.md
           echo "" >> report.md
 
           echo "## Evaluation Metrics" >> report.md
-
           cat metrics.txt >> report.md
 
           echo "" >> report.md
-
           echo "## Feature Sanity Tests" >> report.md
-
-          echo "✅ rolling_avg_10 passed" >> report.md
-          echo "✅ volume_sum_10 passed" >> report.md
+          echo "- ✅ rolling_avg_10 passed" >> report.md
+          echo "- ✅ volume_sum_10 passed" >> report.md
 
           cml comment create report.md
