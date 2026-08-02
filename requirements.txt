@@ -1,0 +1,22 @@
+# Core Data Science
+numpy==2.3.2
+pandas==2.3.1
+scikit-learn==1.7.1
+joblib==1.5.1
+pyarrow==21.0.0
+
+# Experiment Tracking
+mlflow==3.15.0
+
+# Data Version Control
+dvc[gs]==3.67.1
+gcsfs==2026.7.0
+
+# Feature Store
+feast==0.65.0
+
+# Testing
+pytest==9.1.1
+
+# Configuration
+PyYAML==6.0.3
