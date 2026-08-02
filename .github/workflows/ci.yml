@@ -88,7 +88,8 @@ jobs:
 
           print("\nLoading latest model...\n")
 
-          model = mlflow.pyfunc.load_model("models:/stock_rf/latest")
+          model = mlflow.pyfunc.load_model("models:/stock_rf_fixed/latest")
+          print("Loaded registered model successfully.")
 
           print("SUCCESS : Registered model loaded.")
           EOF
